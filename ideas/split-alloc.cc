@@ -16,13 +16,12 @@ struct object {
  }
 };
 
-struct first_fit_state {
+struct first_fitter {
   uint64_t high_water_mark;
   uint64_t n_bytes_used;
   std::vector<bool> used;
-  std::vector<struct object> objects;
 
-  first_fit_state()
+  first_fitter()
       : high_water_mark(0)
       , n_bytes_used(0)
   {}
@@ -30,14 +29,12 @@ struct first_fit_state {
   void print() {
     printf("high_water  =%4ld\n", high_water_mark);
     printf("n_bytes_used=%4ld\n", n_bytes_used);
-    printf("objects: ");  
-    for (const object &object : objects) printf(" %ld.%ld", object.start, object.size);
     printf("\nmemory: ");
     for (const bool b : used) printf("%d", b ? 1 : 0);
     printf("\n");
   }
 
-  void alloc(uint64_t size) {
+  object alloc(uint64_t size) {
     //printf("Allocing %ld\n", size);
     size_t original_size = used.size();
     for (uint64_t start = 0; 1; start++) {
@@ -65,47 +62,48 @@ struct first_fit_state {
       }
       // Found empty space.
       //printf("Alloc(%ld) at %ld\n", size, start);
-      objects.push_back(object(start, size));
       for (uint64_t i = start; i < start + size; i++) {
+        assert(!used[i]);
         used[i] = true;
       }
       if (high_water_mark < start + size) {
         high_water_mark = start+size;
       }
       n_bytes_used += size;
-      return;
+      return object(start, size);
     }
   }
 
-  void free_random() {
-    if (0 < objects.size()) {
-      size_t i = random() % objects.size();
-      struct object o = objects[i];
-      //printf("Free %ld size %ld\n", o.start, o.size);
-      objects[i] = objects[objects.size() - 1];
-      objects.pop_back();
-      for (uint64_t i = 0; i < o.size ; i++) {
-        assert(used[o.start +i]);
-        used[o.start + i] = false;
-      }
-      assert(n_bytes_used >= o.size);
-      n_bytes_used -= o.size;
+  void free(const object &o) {
+    //printf("Free %ld size %ld\n", o.start, o.size);
+    for (uint64_t i = 0; i < o.size ; i++) {
+      assert(used[o.start +i]);
+      used[o.start + i] = false;
     }
+    assert(n_bytes_used >= o.size);
+    n_bytes_used -= o.size;
   }
 };
 
 void first_fit(uint64_t n_objects, uint64_t max_object_size, uint64_t nsteps) {
-    first_fit_state ffs;
+    first_fitter ffs;
+    std::vector<object> ffs_objects;
     for (uint64_t i = 0; i < n_objects; i++) {
         uint64_t siz = random() % max_object_size;
-        ffs.alloc(siz);
+        ffs_objects.push_back(ffs.alloc(siz));
         //ffs.print();
     }
     for (uint64_t i = 0; i < nsteps; i++) {
       if (random() % 2 == 0) {
-        ffs.alloc(random() % max_object_size);
+        ffs_objects.push_back(ffs.alloc(random() % max_object_size));
       } else {
-        ffs.free_random();
+        if (!ffs_objects.empty()) {
+          size_t objnum = random() % ffs_objects.size();
+          const object o = ffs_objects[objnum];
+          ffs_objects[objnum] = ffs_objects[ffs_objects.size() - 1];
+          ffs_objects.pop_back();
+          ffs.free(o);
+        }
       }
       //ffs.print();
     }
