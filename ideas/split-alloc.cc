@@ -112,7 +112,7 @@ struct double_fitter {
   {}
 
   void print() {
-    //printf("high_water  =%4ld\n", high_water_mark);
+    printf("high_water  =%4ld\n", high_water_mark);
     //printf("n_bytes_used=%4ld\n", n_bytes_used);
     printf("avg_bytes   =%f\n",  (double)byte_steps/(double)steps);
     printf("dfs memory: ");
@@ -256,8 +256,8 @@ void first_fit(uint64_t n_objects, uint64_t max_object_size, uint64_t nsteps) {
   }
   for (uint64_t i = 0; i < nsteps; i++) {
     //printf("step %ld\n", i);
-    dfs.print();
-    ffs.print();
+    //dfs.print();
+    //ffs.print();
     if (random() % 2 == 0) {
       uint64_t siz = 1 + random() % max_object_size;
       ffs_objects.push_back(ffs.alloc(siz));
@@ -287,5 +287,5 @@ void first_fit(uint64_t n_objects, uint64_t max_object_size, uint64_t nsteps) {
 
 int main(int argc __attribute__((unused)), const char *argv[] __attribute__((unused))) {
   first_fit(10, 10, 100);
-  first_fit(100, 100, 1000);
+  first_fit(100, 100, 10000);
 }
